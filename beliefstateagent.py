@@ -21,12 +21,33 @@ class BeliefStateAgent(Agent):
         # Current list of belief states over ghost positions
         self.beliefGhostStates = None
 
-        # Grid of walls (assigned with 'state.getWalls()' method)
+        # Grid of( walls (assigned with 'state.getWalls()' method)
         self.walls = None
 
         # Hyper-parameters
         self.ghost_type = self.args.ghostagent
         self.sensor_variance = self.args.sensorvariance
+
+    def sensorModel(self, noisyDist, beliefState, pacmanPos):
+
+        for i in range(self.walls.width):
+            for j in range(self.walls.height):
+                if not self.walls[i][j]:
+                    beliefState[i][j] = beliefState[i][j] * (1-scipy.stats.norm(0, self.sensor_variance).cdf(abs(manhattanDistance(pacmanPos, (i,j))-noisyDist)))
+                else:
+                    beliefState[i][j] = 0.0
+            
+        return beliefState
+
+    def normalizeProba(self, beliefState):
+        sum = 0.0
+        for i in range(self.walls.width):
+            for j in range(self.walls.height):
+                sum +=beliefState[i][j] 
+        for i in range(self.walls.width):
+            for j in range(self.walls.height):
+                (beliefState[i][j])/= sum
+        return beliefState
 
     def update_belief_state(self, evidences, pacman_position):
         """
@@ -55,24 +76,16 @@ class BeliefStateAgent(Agent):
 
         # XXX: Your code here
         
+        
+        for i in range(len(beliefStates)):
+            beliefStates[i] = self.sensorModel(evidences[i], beliefStates[i], pacman_position)
+            self.normalizeProba(beliefStates[i])
 
-        for i in range(beliefStates):
-            beliefStates[i] = sensorModel(evidences[i], beliefStates[i], pacman_position)
         # XXX: End of your code
 
         self.beliefGhostStates = beliefStates
 
         return beliefStates
-
-    def sensorModel(self, noisyDist, beliefState, pacmanPos):
-
-        for i in range(beliefState.width):
-            for j in range(beliefState.height):
-                if self.walls == 0:
-                    beliefState[i][j] = beliefState[i][j] * (1-scipy.stats.norm(0, self.sensor_variance).cdf(abs(manhattanDistance(pacmanPos, (i,j))-noisyDist)))
-                else:
-                    beliefState[i][j] = 0
-        return beliefState
 
     def _get_evidence(self, state):
         """
@@ -123,6 +136,7 @@ class BeliefStateAgent(Agent):
 
         N.B. : [0,0] is the bottom left corner of the maze
         """
+        
         pass
 
     def get_action(self, state):
