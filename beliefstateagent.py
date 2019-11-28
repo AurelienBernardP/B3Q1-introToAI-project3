@@ -39,6 +39,42 @@ class BeliefStateAgent(Agent):
             
         return beliefState
 
+    def _transistionModel(self, beliefState, pacmanPosition):
+        
+        for i in range(1, beliefState.width-1):
+            for j in range(1, beliefState.height-1):
+
+                #Below
+                if(i != 1):
+                    if(pacmanPosition[0] <= i):
+                        transistionModel[i][j] += beliefState[i-1][j]*0.1
+                    else:
+                        transistionModel[i][j] += beliefState[i-1][j]*0.4
+
+                #Above
+                if(i != beliefState.height-2):
+                    if(pacmanPosition[0] <= i):
+                        transistionModel[i][j] += beliefState[i-1][j]*0.4
+                    else:
+                        transistionModel[i][j] += beliefState[i-1][j]*0.1
+
+                
+                #Left
+                if(j != 1):
+                    if(pacmanPosition[1] <= j):
+                        transistionModel[i][j] += beliefState[i][j-1]*0.1
+                    else:
+                        transistionModel[i][j] += beliefState[i][j-1]*0.4
+
+                #Right
+                if(j != beliefState.width-2):
+                    if(pacmanPosition[1] <= j):
+                        transistionModel[i][j] += beliefState[i][j+1]*0.4
+                    else:
+                        transistionModel[i][j] += beliefState[i][j+1]*0.1
+        return transistionModel
+
+
     def normalizeProba(self, beliefState):
         sum = 0.0
         for i in range(self.walls.width):
@@ -79,6 +115,7 @@ class BeliefStateAgent(Agent):
         
         for i in range(len(beliefStates)):
             beliefStates[i] = self.sensorModel(evidences[i], beliefStates[i], pacman_position)
+            beliefStates[i] = self.transistionModel(beliefStates[i],pacman_position)
             self.normalizeProba(beliefStates[i])
 
         # XXX: End of your code
