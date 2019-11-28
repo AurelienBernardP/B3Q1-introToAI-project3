@@ -3,7 +3,8 @@
 from pacman_module.game import Agent
 import numpy as np
 from pacman_module import util
-
+import scipy.stats
+from pacman_module.util import *
 
 class BeliefStateAgent(Agent):
     def __init__(self, args):
@@ -53,12 +54,25 @@ class BeliefStateAgent(Agent):
         beliefStates = self.beliefGhostStates
 
         # XXX: Your code here
+        print(1-scipy.stats.norm(0, 1).cdf(0))
 
+        for i in range(beliefStates):
+            beliefStates[i] = sensorModel(evidences[i], beliefStates[i], pacman_position)
         # XXX: End of your code
 
         self.beliefGhostStates = beliefStates
 
         return beliefStates
+
+    def sensorModel(self, noisyDist, beliefState, pacmanPos):
+
+        for i in range(beliefState.width):
+            for j in range(beliefState.height):
+                if self.walls == 0:
+                    beliefState[i][j] = beliefState[i][j] * (1-scipy.stats.norm(0, 1).cdf(abs(manhattanDistance(pacmanPos, (i,j))-noisyDist)))
+                else:
+                    beliefState[i][j] = 0
+        return beliefState
 
     def _get_evidence(self, state):
         """
