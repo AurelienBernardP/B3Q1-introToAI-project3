@@ -39,42 +39,6 @@ class BeliefStateAgent(Agent):
             
         return beliefState
 
-    def _transistionModel(self, beliefState, pacmanPosition):
-        
-        for i in range(1, beliefState.width-1):
-            for j in range(1, beliefState.height-1):
-
-                #Below
-                if(i != 1):
-                    if(pacmanPosition[0] <= i):
-                        transistionModel[i][j] += beliefState[i-1][j]*0.1
-                    else:
-                        transistionModel[i][j] += beliefState[i-1][j]*0.4
-
-                #Above
-                if(i != beliefState.height-2):
-                    if(pacmanPosition[0] <= i):
-                        transistionModel[i][j] += beliefState[i-1][j]*0.4
-                    else:
-                        transistionModel[i][j] += beliefState[i-1][j]*0.1
-
-                
-                #Left
-                if(j != 1):
-                    if(pacmanPosition[1] <= j):
-                        transistionModel[i][j] += beliefState[i][j-1]*0.1
-                    else:
-                        transistionModel[i][j] += beliefState[i][j-1]*0.4
-
-                #Right
-                if(j != beliefState.width-2):
-                    if(pacmanPosition[1] <= j):
-                        transistionModel[i][j] += beliefState[i][j+1]*0.4
-                    else:
-                        transistionModel[i][j] += beliefState[i][j+1]*0.1
-        return transistionModel
-
-
     def normalizeProba(self, beliefState):
         sum = 0.0
         for i in range(self.walls.width):
@@ -84,6 +48,28 @@ class BeliefStateAgent(Agent):
             for j in range(self.walls.height):
                 (beliefState[i][j])/= sum
         return beliefState
+
+    def transitionModel(self, beliefState, pacmanPos):
+        transition = beliefState
+        for i in range(self.walls.width):
+            for j in range(self.walls.height):
+                if self.walls[i][j] and manhattanDistance(pacmanPos,(i,j)) != 0:
+                    transition[i][j] = 0.0
+                    continue
+                newProba = beliefState[i][j]
+                if not self.walls[i+1][j] :
+                    newProba += (manhattanDistance((i+1,j), pacmanPos)/20) + beliefState[i+1][j]
+                if not self.walls[i-1][j] :
+                    newProba += (manhattanDistance((i-1,j),pacmanPos)/20) + beliefState[i-1][j] 
+                if not self.walls[i][j+1] :
+                    newProba += (manhattanDistance((i,j+1), pacmanPos)/20) + beliefState[i][j+1]
+                if not self.walls[i][j-1] :
+                    newProba += (manhattanDistance((i,j-1),pacmanPos)/20) + beliefState[i][j-1] 
+
+                transition[i][j] = newProba 
+
+        return transition
+                
 
     def update_belief_state(self, evidences, pacman_position):
         """
@@ -112,10 +98,9 @@ class BeliefStateAgent(Agent):
 
         # XXX: Your code here
         
-        
         for i in range(len(beliefStates)):
+            beliefStates[i] = self.transitionModel(beliefStates[i], pacman_position)
             beliefStates[i] = self.sensorModel(evidences[i], beliefStates[i], pacman_position)
-            beliefStates[i] = self.transistionModel(beliefStates[i],pacman_position)
             self.normalizeProba(beliefStates[i])
 
         # XXX: End of your code
