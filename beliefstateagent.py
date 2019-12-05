@@ -33,43 +33,83 @@ class BeliefStateAgent(Agent):
         for i in range(self.walls.width):
             for j in range(self.walls.height):
                 if not self.walls[i][j]:
-                    beliefState[i][j] = beliefState[i][j] * (1-scipy.stats.norm(0, self.sensor_variance).cdf(abs(manhattanDistance(pacmanPos, (i,j))-noisyDist)))
+                    beliefState[i][j] = beliefState[i][j]*10 * (1-scipy.stats.norm(0, self.sensor_variance).cdf(abs(manhattanDistance(pacmanPos, (i,j))-noisyDist)))    
                 else:
                     beliefState[i][j] = 0.0
-            
         return beliefState
 
     def normalizeProba(self, beliefState):
         sum = 0.0
         for i in range(self.walls.width):
             for j in range(self.walls.height):
-                sum +=beliefState[i][j] 
+                sum += beliefState[i][j] 
+
         for i in range(self.walls.width):
             for j in range(self.walls.height):
-                (beliefState[i][j])/= sum
+                beliefState[i][j] /= sum
         return beliefState
 
+
+    def getProba(self, pacmanPos, cellPrev, cellNow):
+        if(self.walls[cellNow[0]][cellNow[1]]):
+            return 0
+        else:
+            distNow = manhattanDistance(cellNow, pacmanPos)
+            distPrev = manhattanDistance(cellPrev, pacmanPos)
+            if(distPrev > distNow):
+                return 1
+            else:
+                if(self.ghost_type == 'confused'):
+                    return 1
+                if(self.ghost_type == 'scared'):
+                    return 2
+                if(self.ghost_type == 'afraid'):
+                    return 2**3
+
+
+    def ghostModel(self, pacmanPos, cellPos):
+        cellXPos = cellPos[0]
+        cellYPos = cellPos[1]
+        probability = [0.0, 0.0, 0.0, 0.0]
+        if(not self.walls[cellXPos-1][cellYPos]):
+            probability[0] = self.getProba(pacmanPos, cellPos, (cellXPos-1, cellYPos))
+        if(not self.walls[cellXPos][cellYPos]):
+            probability[1] = self.getProba(pacmanPos, cellPos, (cellXPos, cellYPos + 1))
+        if(not self.walls[cellXPos-1][cellYPos]):
+            probability[2] = self.getProba(pacmanPos, cellPos, (cellXPos+1, cellYPos))
+        if(not self.walls[cellXPos-1][cellYPos]):
+            probability[3] = self.getProba(pacmanPos, cellPos, (cellXPos, cellYPos - 1))
+
+        sum = 0.0
+        for i in range(len(probability)) :
+            sum += probability[i]
+        
+        if sum == 0.0 :
+            return probability
+        else:
+            for i in range(len(probability)) :
+                probability[i] /= sum
+        return probability 
+
+
     def transitionModel(self, beliefState, pacmanPos):
-        transition = beliefState
-        for i in range(self.walls.width):
-            for j in range(self.walls.height):
-                if self.walls[i][j] and manhattanDistance(pacmanPos,(i,j)) != 0:
-                    transition[i][j] = 0.0
-                    continue
-                newProba = beliefState[i][j]
-                if not self.walls[i+1][j] :
-                    newProba += (manhattanDistance((i+1,j), pacmanPos)/20) + beliefState[i+1][j]
-                if not self.walls[i-1][j] :
-                    newProba += (manhattanDistance((i-1,j),pacmanPos)/20) + beliefState[i-1][j] 
-                if not self.walls[i][j+1] :
-                    newProba += (manhattanDistance((i,j+1), pacmanPos)/20) + beliefState[i][j+1]
-                if not self.walls[i][j-1] :
-                    newProba += (manhattanDistance((i,j-1),pacmanPos)/20) + beliefState[i][j-1] 
+        temp = beliefState.copy()
+        for i in range(1, self.walls.width):
+            for j in range(1, self.walls.height):
+                temp[i][j] = 0.0
 
-                transition[i][j] = newProba 
+        for i in range(1, self.walls.width):
+            for j in range(1, self.walls.height):
+                if self.walls[i][j]:
+                    temp[i][j] += 0.0
+                else:
+                    proba = self.ghostModel(pacmanPos, (i,j))
+                    temp[i-1][j] += proba[0] * beliefState[i-1][j]
+                    temp[i][j+1] += proba[1] * beliefState[i][j+1]
+                    temp[i+1][j] += proba[2] * beliefState[i+1][j]
+                    temp[i][j-1] += proba[3] * beliefState[i][j-1]
 
-        return transition
-                
+        return temp
 
     def update_belief_state(self, evidences, pacman_position):
         """
@@ -97,11 +137,12 @@ class BeliefStateAgent(Agent):
         beliefStates = self.beliefGhostStates
 
         # XXX: Your code here
-        
+        time.sleep(1)
         for i in range(len(beliefStates)):
+            
             beliefStates[i] = self.transitionModel(beliefStates[i], pacman_position)
             beliefStates[i] = self.sensorModel(evidences[i], beliefStates[i], pacman_position)
-            self.normalizeProba(beliefStates[i])
+            beliefStates[i] = self.normalizeProba(beliefStates[i])
 
         # XXX: End of your code
 
