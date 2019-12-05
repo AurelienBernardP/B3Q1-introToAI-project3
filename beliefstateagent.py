@@ -33,10 +33,11 @@ class BeliefStateAgent(Agent):
         for i in range(self.walls.width):
             for j in range(self.walls.height):
                 if not self.walls[i][j]:
-                    beliefState[i][j] = beliefState[i][j]*10 * (1-scipy.stats.norm(0, self.sensor_variance).cdf(abs(manhattanDistance(pacmanPos, (i,j))-noisyDist)))    
+                    beliefState[i][j] = beliefState[i][j] * (1-scipy.stats.norm(0, self.sensor_variance).cdf(abs(manhattanDistance(pacmanPos, (i,j))-noisyDist)))    
                 else:
                     beliefState[i][j] = 0.0
         return beliefState
+
 
     def normalizeProba(self, beliefState):
         sum = 0.0
@@ -94,20 +95,21 @@ class BeliefStateAgent(Agent):
 
     def transitionModel(self, beliefState, pacmanPos):
         temp = beliefState.copy()
-        for i in range(1, self.walls.width):
-            for j in range(1, self.walls.height):
+        for i in range(0, self.walls.width):
+            for j in range(0, self.walls.height):
                 temp[i][j] = 0.0
 
-        for i in range(1, self.walls.width):
-            for j in range(1, self.walls.height):
+        for i in range(1, self.walls.width-1):
+            for j in range(1, self.walls.height-1):
                 if self.walls[i][j]:
                     temp[i][j] += 0.0
                 else:
+                    
                     proba = self.ghostModel(pacmanPos, (i,j))
-                    temp[i-1][j] += proba[0] * beliefState[i-1][j]
-                    temp[i][j+1] += proba[1] * beliefState[i][j+1]
-                    temp[i+1][j] += proba[2] * beliefState[i+1][j]
-                    temp[i][j-1] += proba[3] * beliefState[i][j-1]
+                    temp[i-1][j] += proba[0]* beliefState[i][j]
+                    temp[i][j+1] += proba[1]*beliefState[i][j]
+                    temp[i+1][j] += proba[2]*beliefState[i][j]
+                    temp[i][j-1] += proba[3]*beliefState[i][j]
 
         return temp
 
