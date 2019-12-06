@@ -45,6 +45,9 @@ class BeliefStateAgent(Agent):
             for j in range(self.walls.height):
                 sum += beliefState[i][j] 
 
+        if sum == 0.0:
+            return beliefState
+
         for i in range(self.walls.width):
             for j in range(self.walls.height):
                 beliefState[i][j] /= sum
@@ -52,6 +55,7 @@ class BeliefStateAgent(Agent):
 
 
     def getProba(self, pacmanPos, cellPrev, cellNow):
+
         if(self.walls[cellNow[0]][cellNow[1]]):
             return 0
         else:
@@ -69,6 +73,7 @@ class BeliefStateAgent(Agent):
 
 
     def ghostModel(self, pacmanPos, cellPos):
+
         cellXPos = cellPos[0]
         cellYPos = cellPos[1]
         probability = [0.0, 0.0, 0.0, 0.0]
@@ -90,6 +95,7 @@ class BeliefStateAgent(Agent):
         else:
             for i in range(len(probability)) :
                 probability[i] /= sum
+
         return probability 
 
 
@@ -101,15 +107,16 @@ class BeliefStateAgent(Agent):
 
         for i in range(1, self.walls.width-1):
             for j in range(1, self.walls.height-1):
+                
                 if self.walls[i][j]:
                     temp[i][j] += 0.0
                 else:
-                    
+
                     proba = self.ghostModel(pacmanPos, (i,j))
-                    temp[i-1][j] += proba[0]* beliefState[i][j]
-                    temp[i][j+1] += proba[1]*beliefState[i][j]
-                    temp[i+1][j] += proba[2]*beliefState[i][j]
-                    temp[i][j-1] += proba[3]*beliefState[i][j]
+                    temp[i-1][j] += proba[0] * beliefState[i][j]
+                    temp[i][j+1] += proba[1] * beliefState[i][j]
+                    temp[i+1][j] += proba[2] * beliefState[i][j]
+                    temp[i][j-1] += proba[3] * beliefState[i][j]
 
         return temp
 
@@ -139,7 +146,7 @@ class BeliefStateAgent(Agent):
         beliefStates = self.beliefGhostStates
 
         # XXX: Your code here
-        time.sleep(1)
+        #time.sleep(1)
         for i in range(len(beliefStates)):
             
             beliefStates[i] = self.transitionModel(beliefStates[i], pacman_position)
