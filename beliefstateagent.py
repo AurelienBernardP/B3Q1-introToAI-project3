@@ -5,7 +5,7 @@ import numpy as np
 from pacman_module import util
 import scipy.stats
 from pacman_module.util import *
-import csv
+
 class BeliefStateAgent(Agent):
     def __init__(self, args):
         """
@@ -37,7 +37,6 @@ class BeliefStateAgent(Agent):
         self.positionCalculated = [(0.0,0.0)] * 200
         self.bias = [0.0, 0.0] * 200
 
-        #measurements variables to be errased before submission END##########
     def sensorModel(self, noisyDist, beliefState, pacmanPos):
 
         for i in range(self.walls.width):
@@ -55,9 +54,6 @@ class BeliefStateAgent(Agent):
             for j in range(self.walls.height):
                 sum += beliefState[i][j] 
 
-        if sum == 0.0:
-            return beliefState
-
         for i in range(self.walls.width):
             for j in range(self.walls.height):
                 beliefState[i][j] /= sum
@@ -65,7 +61,6 @@ class BeliefStateAgent(Agent):
 
 
     def getProba(self, pacmanPos, cellPrev, cellNow):
-
         if(self.walls[cellNow[0]][cellNow[1]]):
             return 0
         else:
@@ -83,18 +78,13 @@ class BeliefStateAgent(Agent):
 
 
     def ghostModel(self, pacmanPos, cellPos):
-
         cellXPos = cellPos[0]
         cellYPos = cellPos[1]
         probability = [0.0, 0.0, 0.0, 0.0]
-        if(not self.walls[cellXPos-1][cellYPos]):
-            probability[0] = self.getProba(pacmanPos, cellPos, (cellXPos-1, cellYPos))
-        if(not self.walls[cellXPos][cellYPos]):
-            probability[1] = self.getProba(pacmanPos, cellPos, (cellXPos, cellYPos + 1))
-        if(not self.walls[cellXPos-1][cellYPos]):
-            probability[2] = self.getProba(pacmanPos, cellPos, (cellXPos+1, cellYPos))
-        if(not self.walls[cellXPos-1][cellYPos]):
-            probability[3] = self.getProba(pacmanPos, cellPos, (cellXPos, cellYPos - 1))
+        probability[0] = self.getProba(pacmanPos, cellPos, (cellXPos-1, cellYPos))
+        probability[1] = self.getProba(pacmanPos, cellPos, (cellXPos, cellYPos + 1))
+        probability[2] = self.getProba(pacmanPos, cellPos, (cellXPos+1, cellYPos))
+        probability[3] = self.getProba(pacmanPos, cellPos, (cellXPos, cellYPos - 1))
 
         sum = 0.0
         for i in range(len(probability)) :
@@ -105,7 +95,6 @@ class BeliefStateAgent(Agent):
         else:
             for i in range(len(probability)) :
                 probability[i] /= sum
-
         return probability 
 
 
@@ -117,16 +106,15 @@ class BeliefStateAgent(Agent):
 
         for i in range(1, self.walls.width-1):
             for j in range(1, self.walls.height-1):
-
                 if self.walls[i][j]:
                     temp[i][j] += 0.0
                 else:
-
+                    
                     proba = self.ghostModel(pacmanPos, (i,j))
-                    temp[i-1][j] += proba[0] * beliefState[i][j]
-                    temp[i][j+1] += proba[1] * beliefState[i][j]
-                    temp[i+1][j] += proba[2] * beliefState[i][j]
-                    temp[i][j-1] += proba[3] * beliefState[i][j]
+                    temp[i-1][j] += proba[0]* beliefState[i][j]
+                    temp[i][j+1] += proba[1]*beliefState[i][j]
+                    temp[i+1][j] += proba[2]*beliefState[i][j]
+                    temp[i][j-1] += proba[3]*beliefState[i][j]
 
         return temp
 
@@ -156,7 +144,7 @@ class BeliefStateAgent(Agent):
         beliefStates = self.beliefGhostStates
 
         # XXX: Your code here
-        #time.sleep(1)
+        time.sleep(1)
         for i in range(len(beliefStates)):
             
             beliefStates[i] = self.transitionModel(beliefStates[i], pacman_position)
@@ -199,38 +187,6 @@ class BeliefStateAgent(Agent):
                                  scale=np.sqrt(self.sensor_variance)))
 
         return noisy_distances
-
-    def getShanonEntropy(self, beliefState):
-        
-        entropy = 0.0
-
-        for i in range(1, self.walls.width):
-            for j in range(1, self.walls.height):
-                if(beliefState[i][j] == 0.0):
-                    continue
-                entropy += beliefState[i][j] * np.log(beliefState[i][j])
-
-        return -entropy
-
-
-    #still to be finished
-    def getEstimatedCoordinates(self, beliefState):
-        estimatedX = 0.0
-        estimatedY = 0.0
-
-        for i in range(1, self.walls.width):
-            for j in range(1, self.walls.height):
-                estimatedX += beliefState[i][j] * i
-                estimatedY += beliefState[i][j] * j
-
-        return(estimatedX, estimatedY)
-
-    def getPositionBias(self, state, believedPosition, ghostIndex):
-        (x,y) = state.getGhostPosition(ghostIndex)
-        xBias = abs(x- believedPosition[0])
-        yBias = abs(y - believedPosition[1])
-
-        return(xBias, yBias)
 
     def _record_metrics(self, belief_states, state):
         """
@@ -289,7 +245,6 @@ class BeliefStateAgent(Agent):
         else:
             print("done")
         
-
         pass
 
     def get_action(self, state):
