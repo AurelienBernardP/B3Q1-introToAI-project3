@@ -30,12 +30,12 @@ class BeliefStateAgent(Agent):
         #measurements variables to be errased before submission##########
         self.nbTurns = 0
         #entropy measurements
-        self.entropyArray = [(0,0.0)] * 100
+        self.entropyArray = [(0,0.0)] * 200
         
         #position
-        self.realGhostPosition = [(0,0)] * 100
-        self.positionCalculated = [(0.0,0.0)] * 100
-        self.bias = [0.0, 0.0] * 100
+        self.realGhostPosition = [(0,0)] * 200
+        self.positionCalculated = [(0.0,0.0)] * 200
+        self.bias = [0.0, 0.0] * 200
 
         #measurements variables to be errased before submission END##########
     def sensorModel(self, noisyDist, beliefState, pacmanPos):
@@ -250,20 +250,42 @@ class BeliefStateAgent(Agent):
 
         N.B. : [0,0] is the bottom left corner of the maze
         """
-        if self.nbTurns == 100:
+        if self.nbTurns == len(self.bias):
             #write csv
             with open('recordedStats.csv', 'w', newline='\n') as file:
                 writer = csv.writer(file)
                 writer.writerow(["Turn", "Entropy", "Ghost X position", "Ghost Y position", "Estimated X", "Estimated Y", "X bias", "Y bias"])
-                for i in range(0 , 99):
+                for i in range(0 ,len(self.bias)-1 ):
                     writer.writerow([i, self.entropyArray[i][1], self.realGhostPosition[i][0],self.realGhostPosition[i][1],self.positionCalculated[i][0],self.positionCalculated[i][1],self.bias[i][0],self.bias[i][1]])
+        
+        if self.nbTurns < len(self.bias)-1:
+            # compute the sums
 
-        if self.nbTurns < 100:
-            self.entropyArray[self.nbTurns] = (self.nbTurns, self.getShanonEntropy(belief_states[0]))
-            self.realGhostPosition[self.nbTurns] = state.getGhostPosition(1)
-            self.positionCalculated[self.nbTurns] = self.getEstimatedCoordinates(belief_states[0])
-            self.bias[self.nbTurns] = self.getPositionBias(state, self.positionCalculated[self.nbTurns] , 1)
+            avrgentropy = 0
+            for i in range(len(belief_states)):
+                avrgentropy +=  self.getShanonEntropy(belief_states[0])
+
+            avrgPosition = [0.0 , 0.0]
+            avrgEstimation = [0.0 , 0.0]
+            avrgBias = [0.0 , 0.0]
+            calculatedPos = [ 0.0 , 0.0]
+            for i in range(len(belief_states)):    
+
+                avrgPosition[0] += state.getGhostPosition(i + 1)[0]
+                avrgPosition[1] += state.getGhostPosition(i + 1)[1]
+                calculatedPos[0] = self.getEstimatedCoordinates(belief_states[0])[0]
+                calculatedPos[1] = self.getEstimatedCoordinates(belief_states[0])[1]
+                avrgEstimation[0] += calculatedPos[0]
+                avrgEstimation[1] += calculatedPos[1]
+                avrgBias[0] += self.getPositionBias(state, calculatedPos , i + 1)[0]
+                avrgBias[1] += self.getPositionBias(state, calculatedPos , i + 1)[1]
+            
+            self.entropyArray[self.nbTurns] = avrgentropy / len(belief_states)
+            self.realGhostPosition[self.nbTurns] = avrgPosition[0]/len(belief_states), avrgPosition[1]/len(belief_states)
+            self.positionCalculated[self.nbTurns] = avrgEstimation[0]/len(belief_states), avrgEstimation[1]/len(belief_states)
+            self.bias[self.nbTurns] = avrgBias[0]/len(belief_states),avrgBias[1]/len(belief_states)
             self.nbTurns += 1
+            print(self.nbTurns)
         else:
             print("done")
         
