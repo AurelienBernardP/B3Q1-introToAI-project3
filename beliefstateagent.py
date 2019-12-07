@@ -5,6 +5,7 @@ import numpy as np
 from pacman_module import util
 import scipy.stats
 from pacman_module.util import *
+import csv
 
 class BeliefStateAgent(Agent):
     def __init__(self, args):
@@ -30,12 +31,12 @@ class BeliefStateAgent(Agent):
         #measurements variables to be errased before submission##########
         self.nbTurns = 0
         #entropy measurements
-        self.entropyArray = [(0,0.0)] * 200
+        self.entropyArray = [0] * 300
         
         #position
-        self.realGhostPosition = [(0,0)] * 200
-        self.positionCalculated = [(0.0,0.0)] * 200
-        self.bias = [0.0, 0.0] * 200
+        self.realGhostPosition = [0,0] * 300
+        self.positionCalculated = [0.0,0.0] * 300
+        self.bias = [0.0, 0.0] * 300
 
     def sensorModel(self, noisyDist, beliefState, pacmanPos):
 
@@ -144,7 +145,7 @@ class BeliefStateAgent(Agent):
         beliefStates = self.beliefGhostStates
 
         # XXX: Your code here
-        time.sleep(1)
+        
         for i in range(len(beliefStates)):
             
             beliefStates[i] = self.transitionModel(beliefStates[i], pacman_position)
@@ -188,6 +189,39 @@ class BeliefStateAgent(Agent):
 
         return noisy_distances
 
+    def getShanonEntropy(self, beliefState):
+        
+        entropy = 0.0
+
+        for i in range(1, self.walls.width):
+            for j in range(1, self.walls.height):
+                if(beliefState[i][j] == 0.0):
+                    continue
+                entropy += beliefState[i][j] * np.log(beliefState[i][j])
+
+        return -entropy
+
+
+    #still to be finished
+    def getEstimatedCoordinates(self, beliefState):
+        estimatedX = 0.0
+        estimatedY = 0.0
+
+        for i in range(1, self.walls.width):
+            for j in range(1, self.walls.height):
+                estimatedX += beliefState[i][j] * i
+                estimatedY += beliefState[i][j] * j
+
+        return(estimatedX, estimatedY)
+
+    def getPositionBias(self, state, believedPosition, ghostIndex):
+        (x,y) = state.getGhostPosition(ghostIndex)
+        xBias = abs(x- believedPosition[0])
+        yBias = abs(y - believedPosition[1])
+
+        return(xBias, yBias)
+
+
     def _record_metrics(self, belief_states, state):
         """
         Use this function to record your metrics
@@ -206,15 +240,15 @@ class BeliefStateAgent(Agent):
 
         N.B. : [0,0] is the bottom left corner of the maze
         """
-        if self.nbTurns == len(self.bias):
+        if self.nbTurns == 200:
             #write csv
-            with open('recordedStats.csv', 'w', newline='\n') as file:
+            with open('recordedStats-noWall-'+self.ghost_type+'.csv', 'w', newline='\n') as file:
                 writer = csv.writer(file)
                 writer.writerow(["Turn", "Entropy", "Ghost X position", "Ghost Y position", "Estimated X", "Estimated Y", "X bias", "Y bias"])
-                for i in range(0 ,len(self.bias)-1 ):
-                    writer.writerow([i, self.entropyArray[i][1], self.realGhostPosition[i][0],self.realGhostPosition[i][1],self.positionCalculated[i][0],self.positionCalculated[i][1],self.bias[i][0],self.bias[i][1]])
+                for i in range(0 ,200 ):
+                    writer.writerow([i, self.entropyArray[i], self.realGhostPosition[i][0],self.realGhostPosition[i][1],self.positionCalculated[i][0],self.positionCalculated[i][1],self.bias[i][0],self.bias[i][1]])
         
-        if self.nbTurns < len(self.bias)-1:
+        if self.nbTurns < 200:
             # compute the sums
 
             avrgentropy = 0
