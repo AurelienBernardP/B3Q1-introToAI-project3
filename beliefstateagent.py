@@ -5,6 +5,7 @@ import numpy as np
 from pacman_module import util
 import scipy.stats
 from pacman_module.util import *
+import csv
 
 
 class BeliefStateAgent(Agent):
@@ -28,6 +29,15 @@ class BeliefStateAgent(Agent):
         # Hyper-parameters
         self.ghost_type = self.args.ghostagent
         self.sensor_variance = self.args.sensorvariance
+        #measurements variables to be errased before submission##########
+        self.nbTurns = 0
+        #entropy measurements
+        self.entropyArray = [0] * 300
+        
+        #position
+        self.realGhostPosition = [0,0] * 300
+        self.positionCalculated = [0.0,0.0] * 300
+        self.bias = [0.0, 0.0] * 300
 
     def sensorModel(self, noisyDist, beliefState, pacmanPos):
         """
@@ -262,6 +272,37 @@ class BeliefStateAgent(Agent):
 
         return noisy_distances
 
+    def getShanonEntropy(self, beliefState):
+        entropy = 0.0
+        for i in range(1, self.walls.width):
+            for j in range(1, self.walls.height):
+                if(beliefState[i][j] == 0.0):
+                    continue
+                entropy += beliefState[i][j] * np.log(beliefState[i][j])
+
+        return -entropy
+
+
+    #still to be finished
+    def getEstimatedCoordinates(self, beliefState):
+        estimatedX = 0.0
+        estimatedY = 0.0
+
+        for i in range(1, self.walls.width):
+            for j in range(1, self.walls.height):
+                estimatedX += beliefState[i][j] * i
+                estimatedY += beliefState[i][j] * j
+
+        return(estimatedX, estimatedY)
+
+    def getPositionBias(self, state, believedPosition, ghostIndex):
+        (x,y) = state.getGhostPosition(ghostIndex)
+        xBias = abs(x- believedPosition[0])
+        yBias = abs(y - believedPosition[1])
+
+        return(xBias, yBias)
+
+
     def _record_metrics(self, belief_states, state):
         """
         Use this function to record your metrics
@@ -279,6 +320,45 @@ class BeliefStateAgent(Agent):
            of the maze layout and Z is the number of ghosts.
         N.B. : [0,0] is the bottom left corner of the maze
         """
+        if self.nbTurns == 200:
+            #write csv
+            with open('recordedStats-noWall-'+self.ghost_type+'.csv', 'w', newline='\n') as file:
+                writer = csv.writer(file)
+                writer.writerow(["Turn", "Entropy", "Ghost X position", "Ghost Y position", "Estimated X", "Estimated Y", "X bias", "Y bias"])
+                for i in range(0 ,200 ):
+                    writer.writerow([i, self.entropyArray[i], self.realGhostPosition[i][0],self.realGhostPosition[i][1],self.positionCalculated[i][0],self.positionCalculated[i][1],self.bias[i][0],self.bias[i][1]])
+        
+        if self.nbTurns < 200:
+            # compute the sums
+
+            avrgentropy = 0
+            for i in range(len(belief_states)):
+                avrgentropy +=  self.getShanonEntropy(belief_states[0])
+
+            avrgPosition = [0.0 , 0.0]
+            avrgEstimation = [0.0 , 0.0]
+            avrgBias = [0.0 , 0.0]
+            calculatedPos = [ 0.0 , 0.0]
+            for i in range(len(belief_states)):    
+
+                avrgPosition[0] += state.getGhostPosition(i + 1)[0]
+                avrgPosition[1] += state.getGhostPosition(i + 1)[1]
+                calculatedPos[0] = self.getEstimatedCoordinates(belief_states[0])[0]
+                calculatedPos[1] = self.getEstimatedCoordinates(belief_states[0])[1]
+                avrgEstimation[0] += calculatedPos[0]
+                avrgEstimation[1] += calculatedPos[1]
+                avrgBias[0] += self.getPositionBias(state, calculatedPos , i + 1)[0]
+                avrgBias[1] += self.getPositionBias(state, calculatedPos , i + 1)[1]
+            
+            self.entropyArray[self.nbTurns] = avrgentropy / len(belief_states)
+            self.realGhostPosition[self.nbTurns] = avrgPosition[0]/len(belief_states), avrgPosition[1]/len(belief_states)
+            self.positionCalculated[self.nbTurns] = avrgEstimation[0]/len(belief_states), avrgEstimation[1]/len(belief_states)
+            self.bias[self.nbTurns] = avrgBias[0]/len(belief_states),avrgBias[1]/len(belief_states)
+            self.nbTurns += 1
+            print(self.nbTurns)
+        else:
+            print("done")
+        
         pass
 
     def get_action(self, state):
