@@ -6,6 +6,7 @@ from pacman_module import util
 import scipy.stats
 from pacman_module.util import *
 
+
 class BeliefStateAgent(Agent):
     def __init__(self, args):
         """
@@ -29,35 +30,85 @@ class BeliefStateAgent(Agent):
         self.sensor_variance = self.args.sensorvariance
 
     def sensorModel(self, noisyDist, beliefState, pacmanPos):
+        """
+        The sensor model returning the probability distribution
+        over the latest evidence variables given all previous
+        values.
 
+        Arguments:
+        ----------
+        - `beliefState`: A list of Z
+           N*M numpy matrices of probabilities
+           where N and M are respectively width and height
+           of the maze layout and Z is the number of ghosts.
+        - `noisyDist`: list of distances between
+          pacman and ghosts at state x_{t}
+          where 't' is the current time step
+        - `pacmanPos`: 2D coordinates position
+          of pacman at state x_{t}
+          where 't' is the current time step
+
+        Return:
+        -------
+        - A belief state representing a probability distribution.
+        """
         for i in range(self.walls.width):
             for j in range(self.walls.height):
                 if not self.walls[i][j]:
-                    beliefState[i][j] = beliefState[i][j] * (1-scipy.stats.norm(0, self.sensor_variance).cdf(abs(manhattanDistance(pacmanPos, (i,j))-noisyDist)))    
+                    d = abs(manhattanDistance(pacmanPos, (i, j))-noisyDist)
+                    sample = scipy.stats.norm(0, self.sensor_variance).cdf(d)
+                    beliefState[i][j] = beliefState[i][j] * (1-sample)
                 else:
                     beliefState[i][j] = 0.0
         return beliefState
 
-
     def normalizeProba(self, beliefState):
+        """
+        Normalises a belief state based on its content
+
+        Arguments:
+        ----------
+        - `beliefState`: A list of Z
+           N*M numpy matrices of probabilities
+           where N and M are respectively width and height
+           of the maze layout and Z is the number of ghosts.
+        -------
+        - The normalised belief state
+        """
         sum = 0.0
         for i in range(self.walls.width):
             for j in range(self.walls.height):
-                sum += beliefState[i][j] 
+                sum += beliefState[i][j]
 
         for i in range(self.walls.width):
             for j in range(self.walls.height):
                 beliefState[i][j] /= sum
         return beliefState
 
+    def getProba(self, pacmanPos, cellPrev, cellNew):
+        """
+        Determines the probability for a ghost to move from the cell cellPrev
+        to the cell cellNew based on the state of the game
 
-    def getProba(self, pacmanPos, cellPrev, cellNow):
-        if(self.walls[cellNow[0]][cellNow[1]]):
+        Arguments:
+        ----------
+        - pacmanPos :  the Cartesian position of pacman
+        - cellPrev: the origin cell
+        - cellNew: the destination cell
+        - `pacmanPos`: 2D coordinates position
+          of pacman at state x_{t}
+          where 't' is the current time step
+
+        Return:
+        -------
+        - The probability of the move from cellPrev to cellNew for a ghost
+        """
+        if(self.walls[cellNew[0]][cellNew[1]]):
             return 0
         else:
-            distNow = manhattanDistance(cellNow, pacmanPos)
+            distNew = manhattanDistance(cellNew, pacmanPos)
             distPrev = manhattanDistance(cellPrev, pacmanPos)
-            if(distPrev > distNow):
+            if(distPrev > distNew):
                 return 1
             else:
                 if(self.ghost_type == 'confused'):
@@ -67,29 +118,63 @@ class BeliefStateAgent(Agent):
                 if(self.ghost_type == 'afraid'):
                     return 2**3
 
-
     def ghostModel(self, pacmanPos, cellPos):
+        """
+        Gathers the probabilities for a ghost to be in the cell cellPos based
+        on all its adjacents cells.
+
+        Arguments:
+        ----------
+        - cellPos: the cell to estimate the probability
+        - `pacmanPos`: 2D coordinates position
+          of pacman at state x_{t}
+          where 't' is the current time step
+
+        Return:
+        -------
+        - An array containing all the probabilities explained above
+        """
         cellXPos = cellPos[0]
         cellYPos = cellPos[1]
         probability = [0.0, 0.0, 0.0, 0.0]
-        probability[0] = self.getProba(pacmanPos, cellPos, (cellXPos-1, cellYPos))
-        probability[1] = self.getProba(pacmanPos, cellPos, (cellXPos, cellYPos + 1))
-        probability[2] = self.getProba(pacmanPos, cellPos, (cellXPos+1, cellYPos))
-        probability[3] = self.getProba(pacmanPos, cellPos, (cellXPos, cellYPos - 1))
+        probability[0] = self.getProba(pacmanPos, cellPos,
+                                       (cellXPos-1, cellYPos))
+        probability[1] = self.getProba(pacmanPos, cellPos,
+                                       (cellXPos, cellYPos + 1))
+        probability[2] = self.getProba(pacmanPos, cellPos,
+                                       (cellXPos+1, cellYPos))
+        probability[3] = self.getProba(pacmanPos, cellPos,
+                                       (cellXPos, cellYPos - 1))
 
         sum = 0.0
-        for i in range(len(probability)) :
+        for i in range(len(probability)):
             sum += probability[i]
-        
-        if sum == 0.0 :
+        if sum == 0.0:
             return probability
         else:
-            for i in range(len(probability)) :
+            for i in range(len(probability)):
                 probability[i] /= sum
-        return probability 
-
+        return probability
 
     def transitionModel(self, beliefState, pacmanPos):
+        """
+        The transition model returning the probability distribution
+        over the latest state variables given the previous values.
+
+        Arguments:
+        ----------
+        - `beliefState`: A list of Z
+           N*M numpy matrices of probabilities
+           where N and M are respectively width and height
+           of the maze layout and Z is the number of ghosts.
+        - `pacmanPosition`: 2D coordinates position
+          of pacman at state x_{t}
+          where 't' is the current time step
+
+        Return:
+        -------
+        - A belief state representing a probability distribution.
+        """
         temp = beliefState.copy()
         for i in range(0, self.walls.width):
             for j in range(0, self.walls.height):
@@ -100,9 +185,8 @@ class BeliefStateAgent(Agent):
                 if self.walls[i][j]:
                     temp[i][j] += 0.0
                 else:
-                    
-                    proba = self.ghostModel(pacmanPos, (i,j))
-                    temp[i-1][j] += proba[0]* beliefState[i][j]
+                    proba = self.ghostModel(pacmanPos, (i, j))
+                    temp[i-1][j] += proba[0]*beliefState[i][j]
                     temp[i][j+1] += proba[1]*beliefState[i][j]
                     temp[i+1][j] += proba[2]*beliefState[i][j]
                     temp[i][j-1] += proba[3]*beliefState[i][j]
@@ -135,13 +219,12 @@ class BeliefStateAgent(Agent):
         beliefStates = self.beliefGhostStates
 
         # XXX: Your code here
-        time.sleep(1)
         for i in range(len(beliefStates)):
-            
-            beliefStates[i] = self.transitionModel(beliefStates[i], pacman_position)
-            beliefStates[i] = self.sensorModel(evidences[i], beliefStates[i], pacman_position)
+            beliefStates[i] = self.transitionModel(beliefStates[i],
+                                                   pacman_position)
+            beliefStates[i] = self.sensorModel(evidences[i], beliefStates[i],
+                                               pacman_position)
             beliefStates[i] = self.normalizeProba(beliefStates[i])
-
         # XXX: End of your code
 
         self.beliefGhostStates = beliefStates
@@ -194,10 +277,8 @@ class BeliefStateAgent(Agent):
            N*M numpy matrices of probabilities
            where N and M are respectively width and height
            of the maze layout and Z is the number of ghosts.
-
         N.B. : [0,0] is the bottom left corner of the maze
         """
-        
         pass
 
     def get_action(self, state):
