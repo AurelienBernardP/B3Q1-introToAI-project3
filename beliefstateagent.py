@@ -32,22 +32,21 @@ class BeliefStateAgent(Agent):
 
     def sensorModel(self, noisyDist, beliefState, pacmanPos):
         """
-        The sensor model returning the probability distribution
-        over the latest evidence variables given all previous
+        The sensor model updating the probability distribution
+        with the latest evidence variables given the previous
         values.
 
         Arguments:
         ----------
-        - `beliefState`: A list of Z
-           N*M numpy matrices of probabilities
+        - `beliefState`:
+           N*M numpy matrix of probabilities
            where N and M are respectively width and height
-           of the maze layout and Z is the number of ghosts.
-        - `noisyDist`: list of distances between
+           of the maze layout
+         `noisyDist`: list of distances between
           pacman and ghosts at state x_{t}
           where 't' is the current time step
         - `pacmanPos`: 2D coordinates position
-          of pacman at state x_{t}
-          where 't' is the current time step
+          of pacman in the  matrix
 
         Return:
         -------
@@ -69,10 +68,10 @@ class BeliefStateAgent(Agent):
 
         Arguments:
         ----------
-        - `beliefState`: A list of Z
-           N*M numpy matrices of probabilities
+        - `beliefState`:
+           N*M numpy matrix of probabilities
            where N and M are respectively width and height
-           of the maze layout and Z is the number of ghosts.
+           of the maze layout.
         -------
         - The normalised belief state
         """
@@ -89,16 +88,14 @@ class BeliefStateAgent(Agent):
     def getProba(self, pacmanPos, cellPrev, cellNew):
         """
         Determines the probability for a ghost to move from the cell cellPrev
-        to the cell cellNew based on the state of the game
+        to the cell cellNew based on pacman's position and the walls with in
+        the game
 
         Arguments:
         ----------
         - pacmanPos :  the Cartesian position of pacman
         - cellPrev: the origin cell
         - cellNew: the destination cell
-        - `pacmanPos`: 2D coordinates position
-          of pacman at state x_{t}
-          where 't' is the current time step
 
         Return:
         -------
@@ -121,19 +118,19 @@ class BeliefStateAgent(Agent):
 
     def ghostModel(self, pacmanPos, cellPos):
         """
-        Gathers the probabilities for a ghost to be in the cell cellPos based
-        on all its adjacents cells.
+        Gathers the probabilities for a ghost to move to each
+        adjacent cell from cellPos based on Pacmans' position
 
         Arguments:
         ----------
-        - cellPos: the cell to estimate the probability
+        - cellPos: The current cell
         - `pacmanPos`: 2D coordinates position
-          of pacman at state x_{t}
-          where 't' is the current time step
+          of pacman
 
         Return:
         -------
-        - An array containing all the probabilities explained above
+        - An array containing all the probabilities to move to the adjacent cells.
+          adjacent cells are stored clockwise in the array starting with the left cell
         """
         cellXPos = cellPos[0]
         cellYPos = cellPos[1]
@@ -159,17 +156,16 @@ class BeliefStateAgent(Agent):
 
     def transitionModel(self, beliefState, pacmanPos):
         """
-        The transition model returning the probability distribution
-        over the latest state variables given the previous values.
+        The transition model predicting the probability distribution
+        over the latest state variables given the previous beliefstate.
 
         Arguments:
         ----------
-        - `beliefState`: A list of Z
-           N*M numpy matrices of probabilities
+        - `beliefState`:N*M numpy matrices of probabilities
            where N and M are respectively width and height
-           of the maze layout and Z is the number of ghosts.
+           of the maze layout
         - `pacmanPosition`: 2D coordinates position
-          of pacman at state x_{t}
+          of pacman in the current beliefState
           where 't' is the current time step
 
         Return:
